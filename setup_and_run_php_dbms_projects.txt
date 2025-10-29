@@ -1,0 +1,333 @@
+===============================
+Setup & Run Guide (All 4 PHP + MySQL Projects)
+File: setup_and_run_php_dbms_projects.txt
+Author: Yash Sharma (generated)
+Date: 2025-10-29
+===============================
+
+This single text file explains how to set up the environment (XAMPP/LAMP), create required databases and tables, configure project DB connection files,
+and run the following projects locally:
+ 1) Bank Locker Management System
+ 2) Bus Ticket Booking System
+ 3) Labour Management System
+ 4) E-Commerce Website
+
+--- PREPARATION & PREREQUISITES ---
+- A computer running Windows 10/11, macOS, or Linux (Ubuntu recommended).
+- XAMPP (Windows/macOS/Linux) or LAMP (Linux) stack installed (Apache, MySQL/MariaDB, PHP).
+- Basic familiarity with using a browser (http://localhost) and editing PHP files.
+- (Optional) Git installed if you want version control.
+
+SECTION A — INSTALL XAMPP (Windows) QUICK STEPS
+1. Download XAMPP from https://www.apachefriends.org and run the installer.
+2. During installation accept defaults; choose components: Apache, MySQL, PHP, phpMyAdmin.
+3. After install open "XAMPP Control Panel", then click Start for Apache and MySQL.
+4. Allow firewall access if Windows prompts. Verify Apache runs on port 80 and MySQL on 3306.
+5. Open http://localhost or http://127.0.0.1 to check server running.
+6. Open http://localhost/phpmyadmin to access the database GUI.
+
+SECTION B — LAMP (Ubuntu) QUICK STEPS (ALTERNATIVE)
+1. Install Apache, MySQL, PHP:
+   sudo apt update
+   sudo apt install apache2 mysql-server php libapache2-mod-php php-mysql -y
+2. Start services:
+   sudo systemctl start apache2
+   sudo systemctl start mysql
+3. Secure MySQL (optional but recommended):
+   sudo mysql_secure_installation
+4. Put project files at /var/www/html/<project-folder> (use sudo or set ownership).
+
+SECTION C — PLACE PROJECT FILES
+1. Locate your XAMPP htdocs folder (Windows default): C:\xampp\htdocs\
+2. Copy the 4 project folders into htdocs:
+   - C:\xampp\htdocs\Bank_Locker_Management_System
+   - C:\xampp\htdocs\Bus_Ticket_Booking_System
+   - C:\xampp\htdocs\Labour_Management_System
+   - C:\xampp\htdocs\E_Commerce_Website
+3. Make sure each folder has a config file for DB connection (e.g., config/db.php or config.php).
+4. If using Linux LAMP, copy to /var/www/html/ similarly (adjust file permissions: sudo chown -R www-data:www-data /var/www/html/<folder>).
+
+SECTION D — CONFIGURE DATABASE CONNECTION (SAMPLE)
+Edit the DB connection file (example path: config/db.php or utils/db.php). Use correct DB name per project (see next section).
+
+Sample config code (replace as needed):
+
+<?php
+// config/db.php
+$servername = "localhost";
+$username = "root";
+$password = "";    // XAMPP default has empty root password
+$dbname = "REPLACE_WITH_DBNAME";  // e.g., bank_locker_db
+$conn = new mysqli($servername, $username, $password, $dbname);
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+?>
+
+Note: If you set a root password in MySQL, replace $password accordingly. For production never use root — create a dedicated DB user.
+
+SECTION E — CREATE DATABASES + TABLES (SQL SCRIPTS)
+
+You can import these SQL blocks using phpMyAdmin (Import -> paste SQL) or run via MySQL CLI.
+
+-----------------------------
+1) Bank Locker Management System
+-----------------------------
+-- Create database and tables for Bank Locker Management
+CREATE DATABASE IF NOT EXISTS bank_locker_db;
+USE bank_locker_db;
+
+CREATE TABLE users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(100) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  role ENUM('admin','user') DEFAULT 'user',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE lockers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  locker_number VARCHAR(50) NOT NULL UNIQUE,
+  status ENUM('available','occupied') DEFAULT 'available',
+  user_id INT DEFAULT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE locker_transactions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  locker_id INT NOT NULL,
+  user_id INT,
+  action VARCHAR(50),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (locker_id) REFERENCES lockers(id),
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- Sample admin user (replace password with hashed value in real app)
+INSERT INTO users (name, email, password, role)
+VALUES ('Admin', 'admin@example.com', 'admin123', 'admin');
+
+INSERT INTO lockers (locker_number, status) VALUES ('LKR-001', 'available'),('LKR-002','available');
+
+-----------------------------
+2) Bus Ticket Booking System
+-----------------------------
+CREATE DATABASE IF NOT EXISTS bus_booking_db;
+USE bus_booking_db;
+
+CREATE TABLE users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(100) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE buses (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  bus_name VARCHAR(100) NOT NULL,
+  route VARCHAR(255),
+  total_seats INT DEFAULT 40
+);
+
+CREATE TABLE bookings (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  bus_id INT NOT NULL,
+  seat_number INT NOT NULL,
+  status ENUM('booked','cancelled') DEFAULT 'booked',
+  booked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id),
+  FOREIGN KEY (bus_id) REFERENCES buses(id)
+);
+
+-- Sample data
+INSERT INTO buses (bus_name, route, total_seats) VALUES ('Express A', 'CityX - CityY', 40);
+
+-----------------------------
+3) Labour Management System
+-----------------------------
+CREATE DATABASE IF NOT EXISTS labour_mgmt_db;
+USE labour_mgmt_db;
+
+CREATE TABLE contractors (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100),
+  email VARCHAR(100) UNIQUE,
+  password VARCHAR(255),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE supervisors (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  contractor_id INT,
+  name VARCHAR(100),
+  email VARCHAR(100),
+  password VARCHAR(255),
+  FOREIGN KEY (contractor_id) REFERENCES contractors(id)
+);
+
+CREATE TABLE workers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  supervisor_id INT,
+  name VARCHAR(100),
+  skill VARCHAR(100),
+  wage DECIMAL(10,2),
+  FOREIGN KEY (supervisor_id) REFERENCES supervisors(id)
+);
+
+CREATE TABLE work_records (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  worker_id INT,
+  supervisor_id INT,
+  contractor_id INT,
+  date_worked DATE,
+  hours_worked DECIMAL(5,2),
+  total_pay DECIMAL(10,2),
+  description TEXT,
+  FOREIGN KEY (worker_id) REFERENCES workers(id),
+  FOREIGN KEY (supervisor_id) REFERENCES supervisors(id),
+  FOREIGN KEY (contractor_id) REFERENCES contractors(id)
+);
+
+-- Sample data (add a contractor and supervisor manually later using the app or SQL inserts)
+
+-----------------------------
+4) E-Commerce Website
+-----------------------------
+CREATE DATABASE IF NOT EXISTS ecommerce_db;
+USE ecommerce_db;
+
+CREATE TABLE users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(100) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  address TEXT,
+  phone VARCHAR(20),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE products (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  price DECIMAL(10,2) NOT NULL,
+  stock INT DEFAULT 0,
+  image VARCHAR(255)
+);
+
+CREATE TABLE cart_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  product_id INT NOT NULL,
+  quantity INT DEFAULT 1,
+  added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id),
+  FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+CREATE TABLE orders (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  total_amount DECIMAL(10,2) NOT NULL,
+  status ENUM('pending','completed','cancelled') DEFAULT 'pending',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE order_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  order_id INT NOT NULL,
+  product_id INT NOT NULL,
+  quantity INT NOT NULL,
+  price DECIMAL(10,2) NOT NULL,
+  FOREIGN KEY (order_id) REFERENCES orders(id),
+  FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+-- Sample product
+INSERT INTO products (name, description, price, stock) VALUES ('Sample Product', 'This is a sample product', 199.99, 10);
+
+-----------------------------
+SECTION F — IMPORTING THE SQL
+Option 1: phpMyAdmin (GUI)
+- Open http://localhost/phpmyadmin
+- Click "New" -> type database name -> Create
+- Click the database -> Import -> Paste the SQL block or upload .sql file -> Go
+
+Option 2: MySQL CLI (example)
+- Save SQL above into files e.g., bank_locker.sql then run:
+  mysql -u root -p < bank_locker.sql
+(If root has empty password on XAMPP, you can omit -p)
+
+SECTION G — ADJUST PROJECT CONFIG FILES
+1. Each project should have a config file (config/db.php, utils/db.php or similar).
+2. Edit DB credentials: host (localhost), username (root), password ('') for XAMPP default, database name (e.g., bank_locker_db).
+3. Example file paths you might need to edit:
+   - labour-wage/config/db.php
+   - e_commerce/config/db.php
+   - bank-locker/config/db.php
+   - bus-booking/config/db.php
+
+SECTION H — RUN THE PROJECTS IN BROWSER
+1. Start Apache and MySQL from XAMPP Control Panel.
+2. Open browser and navigate to:
+   - Bank Locker: http://localhost/Bank_Locker_Management_System/
+   - Bus Booking: http://localhost/Bus_Ticket_Booking_System/
+   - Labour Mgmt: http://localhost/Labour_Management_System/
+   - E-Commerce: http://localhost/E_Commerce_Website/
+3. Use sample credentials you created (e.g., admin@example.com / admin123) or register via UI if provided.
+
+SECTION I — QUICK TROUBLESHOOTING
+- "Error establishing DB connection": check config DB credentials and that MySQL is running.
+- "404 Not Found": ensure project folder inside htdocs and index.php exists.
+- Ports conflict: if Apache fails to start, port 80 may be used by Skype/other apps — change Apache port to 8080 or stop the blocking app.
+- Permission issues on Linux: use sudo chown -R www-data:www-data /var/www/html/<project>
+
+SECTION J — OPTIONAL: Create Local DB User (safer than root)
+Run in MySQL:
+  CREATE USER 'project_user'@'localhost' IDENTIFIED BY 'strongpassword';
+  GRANT ALL PRIVILEGES ON bank_locker_db.* TO 'project_user'@'localhost';
+  FLUSH PRIVILEGES;
+
+SECTION K — SUMMARY OF THE 4 PROJECTS
+1) Bank Locker Management System
+   - Purpose: Manage bank lockers, users, and access logs.
+   - Tech: PHP + MySQL, sessions for auth, admin/user roles.
+   - Key tables: users, lockers, locker_transactions
+
+2) Bus Ticket Booking System
+   - Purpose: Reserve and cancel bus tickets; manage buses and bookings.
+   - Tech: PHP + MySQL, simple booking workflow.
+   - Key tables: users, buses, bookings
+
+3) Labour Management System
+   - Purpose: Manage contractors, supervisors, workers; record daily work and expenses.
+   - Tech: PHP + MySQL, role-based dashboards, email credential delivery.
+   - Key tables: contractors, supervisors, workers, work_records
+
+4) E-Commerce Website
+   - Purpose: Online store with product listing, cart, checkout, and orders.
+   - Tech: PHP + MySQL, basic e-commerce flows.
+   - Key tables: users, products, cart_items, orders, order_items
+
+SECTION L — WHAT YOU SHOULD DO NEXT (RECOMMENDATIONS)
+1. Replace plain-text passwords in sample SQL with hashed passwords (password_hash in PHP).
+2. Implement input validation and prepared statements (use PDO or mysqli prepared statements) to prevent SQL injection.
+3. Add basic CSS/Bootstrap to improve UI, and create screenshots for reports.
+4. Add README.md inside each project with project-specific run instructions and demo images.
+5. Backup your SQL using phpMyAdmin Export when finished.
+
+
+
+
+https://chatgpt.com/c/67f3dc43-0ef0-8006-8c2b-5478ce72bb72  Labour_Management_System
+
+https://chatgpt.com/c/67f3e473-8480-8006-8b9e-8fbe73054f82   Bus_Ticket_Booking_System
+
+https://chatgpt.com/c/67e65148-fd58-8006-9b6d-c08629dc6ef6 E_commerce
+
+https://chatgpt.com/c/67f3dc43-0ef0-8006-8c2b-5478ce72bb72  Bank_Locker_Management_System
+
